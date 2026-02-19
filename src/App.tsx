@@ -3,13 +3,14 @@ import { initSDK, getAccelerationMode } from './runanywhere';
 import { ChatTab } from './components/ChatTab';
 import { VisionTab } from './components/VisionTab';
 import { VoiceTab } from './components/VoiceTab';
+import { ContractAnalyzer } from './components/ContractAnalyzer';
 
-type Tab = 'chat' | 'vision' | 'voice';
+type Tab = 'chat' | 'vision' | 'voice' | 'contract';
 
 export function App() {
   const [sdkReady, setSdkReady] = useState(false);
   const [sdkError, setSdkError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [activeTab, setActiveTab] = useState<Tab>('contract');
 
   useEffect(() => {
     initSDK()
@@ -41,11 +42,14 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>RunAnywhere AI</h1>
+        <h1>AI Smart Contract Risk Analyzer</h1>
         {accel && <span className="badge">{accel === 'webgpu' ? 'WebGPU' : 'CPU'}</span>}
       </header>
 
       <nav className="tab-bar">
+        <button className={activeTab === 'contract' ? 'active' : ''} onClick={() => setActiveTab('contract')}>
+          🔒 Security
+        </button>
         <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>
           💬 Chat
         </button>
@@ -58,6 +62,7 @@ export function App() {
       </nav>
 
       <main className="tab-content">
+        {activeTab === 'contract' && <ContractAnalyzer />}
         {activeTab === 'chat' && <ChatTab />}
         {activeTab === 'vision' && <VisionTab />}
         {activeTab === 'voice' && <VoiceTab />}

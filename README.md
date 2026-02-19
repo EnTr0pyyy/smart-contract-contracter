@@ -1,129 +1,187 @@
-# RunAnywhere Web Starter App
+# AI Smart Contract Risk Analyzer
 
-A minimal React + TypeScript starter app demonstrating **on-device AI in the browser** using the [`@runanywhere/web`](https://www.npmjs.com/package/@runanywhere/web) SDK. All inference runs locally via WebAssembly — no server, no API key, 100% private.
+A privacy-first, on-device AI-powered smart contract security analyzer built with RunAnywhere SDK.
 
-## Features
+## 🔒 Key Features
 
-| Tab | What it does |
-|-----|-------------|
-| **Chat** | Stream text from an on-device LLM (SmolLM2 360M) |
-| **Vision** | Point your camera and describe what the VLM sees (LFM2-VL 450M) |
-| **Voice** | Speak naturally — VAD detects speech, STT transcribes, LLM responds, TTS speaks back |
+- **🤖 On-Device AI Analysis**: Uses Liquid AI LFM2 model running locally in your browser
+- **🛡️ Privacy-First**: All analysis happens locally - your contract code never leaves your device
+- **📊 Risk Scoring**: Provides 0-10 risk scores with detailed explanations
+- **👥 Beginner-Friendly**: Translates technical security risks into plain English
+- **⚡ Offline Capable**: Works without internet connection after initial model download
+- **🆓 Free to Use**: No API costs or usage limits
 
-## Quick Start
+## 🎯 What It Analyzes
+
+The AI examines smart contracts for these key risk categories:
+
+1. **Administrative Controls**: Centralized owner powers, onlyOwner patterns
+2. **Fund Safety**: Withdrawal functions, fund locking mechanisms  
+3. **Upgrade Mechanisms**: Proxy patterns, upgrade capabilities
+4. **Economic Manipulation**: Fee manipulation, unlimited minting
+5. **Access Controls**: Permission systems, role management
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- Modern browser with WebAssembly support (Chrome 96+, Edge 96+)
+
+### Installation
 
 ```bash
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Models are downloaded on first use and cached in the browser's Origin Private File System (OPFS).
+### First Time Usage
 
-## How It Works
+1. Open the application in your browser (http://localhost:5174)
+2. The AI model (~250MB) will download automatically on first use
+3. Once loaded, analysis works completely offline
+4. Navigate to the "🔒 Security" tab to start analyzing contracts
 
-```
-@runanywhere/web (npm package)
-  ├── WASM engine (llama.cpp, whisper.cpp, sherpa-onnx)
-  ├── Model management (download, OPFS cache, load/unload)
-  └── TypeScript API (TextGeneration, STT, TTS, VAD, VLM, VoicePipeline)
-```
+## 📝 How to Use
 
-The app imports everything from `@runanywhere/web`:
+### Quick Start with Sample Contracts
 
-```typescript
-import { RunAnywhere, TextGeneration, VLMWorkerBridge } from '@runanywhere/web';
+1. Click "📝 Load Vulnerable Sample" to see a high-risk contract analysis
+2. Click "✅ Load Safe Sample" to see a low-risk contract analysis  
+3. Click "🔍 Analyze Contract" to run the AI analysis
 
-await RunAnywhere.initialize({ environment: 'development' });
+### Analyze Your Own Contracts
 
-// Stream LLM text
-const { stream } = await TextGeneration.generateStream('Hello!', { maxTokens: 200 });
-for await (const token of stream) { console.log(token); }
+1. **Paste Solidity Code**: Copy/paste your smart contract source code into the text area
+2. **Contract Address**: Enter an Ethereum contract address (0x...) - *Note: Etherscan integration coming soon*
+3. **Upload File**: Drag & drop .sol files - *Coming soon*
+4. Click "🔍 Analyze Contract" to start analysis
 
-// VLM: describe an image
-const result = await VLMWorkerBridge.shared.process(rgbPixels, width, height, 'Describe this.');
-```
+### Understanding Results
 
-## Project Structure
+- **Risk Score**: 0-10 scale with color coding (Green = Low Risk, Red = High Risk)
+- **Confidence**: How certain the AI is about its analysis
+- **Category Breakdown**: Specific scores for each risk category
+- **Findings**: Specific vulnerabilities or issues found
+- **Impact**: What could happen if the risks are exploited
+- **Recommendations**: Actionable advice for users
+
+## 🛠️ Technical Architecture
+
+### Frontend Stack
+- **React 19**: Modern UI framework
+- **TypeScript**: Type-safe development
+- **Vite**: Fast build tool and dev server
+
+### AI Engine
+- **RunAnywhere Web SDK**: On-device AI inference
+- **Liquid AI LFM2 350M**: Lightweight language model optimized for browser
+- **WebAssembly**: High-performance WASM runtime via llama.cpp
+- **OPFS Storage**: Persistent model caching across sessions
+
+### Privacy & Security
+- **Zero Server Calls**: All analysis happens client-side
+- **No Data Collection**: No telemetry or usage tracking  
+- **Local Storage Only**: Models cached in browser's sandboxed storage
+- **Content Security Policy**: Strict CSP headers prevent XSS
+
+## ⚠️ Important Disclaimers
+
+This tool is designed for educational purposes and preliminary security assessment. It should **NOT** be considered a substitute for professional security audits.
+
+**Limitations:**
+- AI analysis may produce false positives or miss sophisticated vulnerabilities
+- Not equivalent to comprehensive manual security audits
+- Should not be the sole basis for investment or interaction decisions
+- Always seek professional auditing for contracts handling significant funds
+
+## 🏗️ Development
+
+### Project Structure
 
 ```
 src/
-├── main.tsx              # React root
-├── App.tsx               # Tab navigation (Chat | Vision | Voice)
-├── runanywhere.ts        # SDK init + model catalog + VLM worker
-├── workers/
-│   └── vlm-worker.ts     # VLM Web Worker entry (2 lines)
-├── hooks/
-│   └── useModelLoader.ts # Shared model download/load hook
 ├── components/
-│   ├── ChatTab.tsx        # LLM streaming chat
-│   ├── VisionTab.tsx      # Camera + VLM inference
-│   ├── VoiceTab.tsx       # Full voice pipeline
-│   └── ModelBanner.tsx    # Download progress UI
-└── styles/
-    └── index.css          # Dark theme CSS
+│   ├── ContractAnalyzer.tsx    # Main analysis component
+│   ├── ChatTab.tsx             # Original chat interface
+│   ├── VisionTab.tsx           # Vision AI interface  
+│   └── VoiceTab.tsx            # Voice AI interface
+├── hooks/
+│   └── useModelLoader.ts       # Model loading logic
+├── styles/
+│   └── index.css               # Global styles
+└── runanywhere.ts              # SDK configuration
 ```
 
-## Adding Your Own Models
+### Key Dependencies
 
-Edit the `MODELS` array in `src/runanywhere.ts`:
-
-```typescript
+```json
 {
-  id: 'my-custom-model',
-  name: 'My Model',
-  repo: 'username/repo-name',           // HuggingFace repo
-  files: ['model.Q4_K_M.gguf'],         // Files to download
-  framework: LLMFramework.LlamaCpp,
-  modality: ModelCategory.Language,      // or Multimodal, SpeechRecognition, etc.
-  memoryRequirement: 500_000_000,        // Bytes
+  "@runanywhere/web": "0.1.0-beta.8",
+  "@runanywhere/web-llamacpp": "0.1.0-beta.8", 
+  "@runanywhere/web-onnx": "0.1.0-beta.8",
+  "react": "^19.0.0"
 }
 ```
 
-Any GGUF model compatible with llama.cpp works for LLM/VLM. STT/TTS/VAD use sherpa-onnx models.
+### Adding New Analysis Features
 
-## Deployment
+1. **Extend Risk Categories**: Add new categories to the `RiskCategory` interface
+2. **Improve Prompts**: Modify `RISK_ANALYSIS_PROMPT` for better AI analysis  
+3. **Add Static Analysis**: Combine AI with traditional pattern matching
+4. **UI Enhancements**: Add visualizations, code highlighting, etc.
 
-### Vercel
+## 🚧 Roadmap
 
-```bash
-npm run build
-npx vercel --prod
-```
+### Phase 1 (Hackathon MVP) ✅
+- [x] Basic contract input interface
+- [x] AI-powered risk analysis  
+- [x] Risk scoring and categorization
+- [x] Beginner-friendly explanations
+- [x] Sample vulnerable/safe contracts
 
-The included `vercel.json` sets the required Cross-Origin-Isolation headers.
+### Phase 2 (Post-Hackathon)
+- [ ] Etherscan integration for contract fetching
+- [ ] Code syntax highlighting with risk annotations
+- [ ] Contract comparison tools
+- [ ] PDF report generation
+- [ ] Beginner vs Developer modes
 
-### Netlify
+### Phase 3 (Future)
+- [ ] Multi-chain support (Polygon, Arbitrum, etc.)
+- [ ] Browser extension for one-click analysis
+- [ ] Community vulnerability pattern database
+- [ ] Integration with DeFi platforms and wallets
 
-Add a `_headers` file:
+## 🤝 Contributing
 
-```
-/*
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: credentialless
-```
+This project was created for a hackathon but welcomes contributions:
 
-### Any static host
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Serve the `dist/` folder with these HTTP headers on all responses:
+## 📄 License
 
-```
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: credentialless
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Browser Requirements
+## 🙏 Acknowledgments
 
-- Chrome 96+ or Edge 96+ (recommended: 120+)
-- WebAssembly (required)
-- SharedArrayBuffer (requires Cross-Origin Isolation headers)
-- OPFS (for persistent model cache)
+- **RunAnywhere AI** for the incredible on-device AI SDK
+- **Liquid AI** for the efficient LFM2 language model  
+- **Web3 Security Community** for vulnerability pattern research
+- **Hackathon Organizers** for the opportunity to build this tool
 
-## Documentation
+---
 
-- [SDK API Reference](https://docs.runanywhere.ai)
-- [npm package](https://www.npmjs.com/package/@runanywhere/web)
-- [GitHub](https://github.com/RunanywhereAI/runanywhere-sdks)
+**Built with ❤️ for the Web3 security community**
 
-## License
-
-MIT
+*Making smart contract security accessible to everyone, privately and for free.*
