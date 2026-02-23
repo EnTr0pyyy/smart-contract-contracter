@@ -1,0 +1,157 @@
+// Prisma schema for AI Smart Contract Risk Analyzer
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  apiKey        String?   @unique
+  tier          UserTier  @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  analyses      Analysis[]
+  apiUsage      ApiUsage[]
+  
+  @@index([email])
+  @@index([apiKey])
+}
+
+enum UserTier {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+// Contract Analysis model
+model Analysis {
+  id                String          @id @default(cuid())
+  userId            String?
+  contractAddress   String?
+  contractCode      String?         @db.Text
+  chain             String          @default("ethereum")
+  overallScore      Float
+  confidence        Float
+  summary           String          @db.Text
+  categories        Json            // Structured risk categories
+  findings          Json            // Detailed findings
+  recommendations   Json            // Actionable recommendations
+  metadata          Json?           // Additional metadata (compiler version, etc.)
+  analysisMode      AnalysisMode    @default(BEGINNER)
+  status            AnalysisStatus  @default(COMPLETED)
+  processingTimeMs  Int?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  user              User?           @relation(fields: [userId], references: [id])
+  comparisonA       Comparison[]    @relation("ComparisonA")
+  comparisonB       Comparison[]    @relation("ComparisonB")
+  
+  @@index([userId])
+  @@index([contractAddress])
+  @@index([createdAt])
+}
+
+enum AnalysisMode {
+  BEGINNER
+  DEVELOPER
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Contract Comparison model
+model Comparison {
+  id              String    @id @default(cuid())
+  analysisAId     String
+  analysisBId     String
+  differences     Json      // Structured comparison results
+  createdAt       DateTime  @default(now())
+  
+  analysisA       Analysis  @relation("ComparisonA", fields: [analysisAId], references: [id])
+  analysisB       Analysis  @relation("ComparisonB", fields: [analysisBId], references: [id])
+  
+  @@index([analysisAId])
+  @@index([analysisBId])
+}
+
+// API Usage tracking
+model ApiUsage {
+  id              String    @id @default(cuid())
+  userId          String
+  endpoint        String
+  method          String
+  statusCode      Int
+  responseTimeMs  Int
+  timestamp       DateTime  @default(now())
+  ipAddress       String?
+  userAgent       String?
+  
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// Rate Limit tracking
+model RateLimit {
+  id              String    @id @default(cuid())
+  identifier      String    // IP address or API key
+  endpoint        String
+  requestCount    Int       @default(1)
+  windowStart     DateTime  @default(now())
+  expiresAt       DateTime
+  
+  @@unique([identifier, endpoint])
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+// Cached Contract Data
+model ContractCache {
+  id              String    @id @default(cuid())
+  contractAddress String
+  chain           String
+  sourceCode      String    @db.Text
+  abi             Json?
+  compilerVersion String?
+  isVerified      Boolean   @default(false)
+  fetchedAt       DateTime  @default(now())
+  expiresAt       DateTime
+  
+  @@unique([contractAddress, chain])
+  @@index([contractAddress])
+  @@index([expiresAt])
+}
+
+// Audit Log
+model AuditLog {
+  id              String    @id @default(cuid())
+  userId          String?
+  action          String
+  resource        String
+  resourceId      String?
+  details         Json?
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+}
