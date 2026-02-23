@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
 import config from '../config';
-import { AuthRequest } from './auth';
-import { RateLimitError } from '../utils/ApiError';
+import { ApiError } from '../utils/ApiError';
+import cacheService from '../services/caching/redis.service';
+import { CacheKeys } from '../services/caching/cache-keys';
 
-const prisma = new PrismaClient();
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    tier: 'FREE' | 'PRO' | 'ENTERPRISE';
+  };
+}
 
 interface RateLimitConfig {
   windowMs: number;
@@ -50,99 +55,32 @@ export const rateLimiter = async (
     const tier = req.user?.tier;
     const limits = getTierLimits(tier);
 
-    const now = new Date();
-    const windowStart = new Date(now.getTime() - limits.windowMs);
+    const windowSeconds = Math.floor(limits.windowMs / 1000);
+    const cacheKey = CacheKeys.rateLimit(identifier, endpoint, Date.now());
 
-    // Check existing rate limit record
-    let rateLimit = await prisma.rateLimit.findUnique({
-      where: {
-        identifier_endpoint: {
-          identifier,
-          endpoint,
-        },
-      },
-    });
-
-    if (rateLimit) {
-      // Check if window has expired
-      if (rateLimit.expiresAt < now) {
-        // Reset the counter
-        rateLimit = await prisma.rateLimit.update({
-          where: {
-            identifier_endpoint: {
-              identifier,
-              endpoint,
-            },
-          },
-          data: {
-            requestCount: 1,
-            windowStart: now,
-            expiresAt: new Date(now.getTime() + limits.windowMs),
-          },
-        });
-      } else if (rateLimit.requestCount >= limits.maxRequests) {
-        // Rate limit exceeded
-        const resetTime = Math.ceil((rateLimit.expiresAt.getTime() - now.getTime()) / 1000);
-        
-        res.setHeader('X-RateLimit-Limit', limits.maxRequests.toString());
-        res.setHeader('X-RateLimit-Remaining', '0');
-        res.setHeader('X-RateLimit-Reset', resetTime.toString());
-        
-        throw new RateLimitError(`Rate limit exceeded. Try again in ${resetTime} seconds.`);
-      } else {
-        // Increment counter
-        rateLimit = await prisma.rateLimit.update({
-          where: {
-            identifier_endpoint: {
-              identifier,
-              endpoint,
-            },
-          },
-          data: {
-            requestCount: {
-              increment: 1,
-            },
-          },
-        });
-      }
-    } else {
-      // Create new rate limit record
-      rateLimit = await prisma.rateLimit.create({
-        data: {
-          identifier,
-          endpoint,
-          requestCount: 1,
-          windowStart: now,
-          expiresAt: new Date(now.getTime() + limits.windowMs),
-        },
-      });
-    }
+    // Increment counter in Redis
+    const count = await cacheService.incr(cacheKey, windowSeconds);
 
     // Set rate limit headers
-    const remaining = Math.max(0, limits.maxRequests - rateLimit.requestCount);
-    const resetTime = Math.ceil((rateLimit.expiresAt.getTime() - now.getTime()) / 1000);
+    const remaining = Math.max(0, limits.maxRequests - count);
+    const ttl = await cacheService.ttl(cacheKey);
     
     res.setHeader('X-RateLimit-Limit', limits.maxRequests.toString());
     res.setHeader('X-RateLimit-Remaining', remaining.toString());
-    res.setHeader('X-RateLimit-Reset', resetTime.toString());
+    res.setHeader('X-RateLimit-Reset', ttl.toString());
+
+    // Check if limit exceeded
+    if (count > limits.maxRequests) {
+      throw new ApiError(
+        429,
+        'RATE_LIMIT_EXCEEDED',
+        `Rate limit exceeded. Try again in ${ttl} seconds.`,
+        { resetAfter: ttl }
+      );
+    }
 
     next();
   } catch (error) {
     next(error);
   }
-};
-
-/**
- * Cleanup expired rate limit records (should be run periodically)
- */
-export const cleanupExpiredRateLimits = async (): Promise<number> => {
-  const result = await prisma.rateLimit.deleteMany({
-    where: {
-      expiresAt: {
-        lt: new Date(),
-      },
-    },
-  });
-  
-  return result.count;
 };
