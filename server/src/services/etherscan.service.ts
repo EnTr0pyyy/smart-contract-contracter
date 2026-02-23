@@ -1,31 +1,28 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import config from '../config';
 import { ApiError } from '../utils/ApiError';
-
-const prisma = new PrismaClient();
 
 interface ChainConfig {
   apiUrl: string;
   apiKey: string;
+  explorerName: string;
 }
 
 const CHAIN_CONFIGS: Record<string, ChainConfig> = {
   ethereum: {
     apiUrl: 'https://api.etherscan.io/api',
-    apiKey: config.etherscanApiKey,
+    apiKey: config.etherscanApiKey || '',
+    explorerName: 'Etherscan',
   },
   polygon: {
     apiUrl: 'https://api.polygonscan.com/api',
-    apiKey: config.polygonscanApiKey,
+    apiKey: config.polygonscanApiKey || '',
+    explorerName: 'Polygonscan',
   },
   bsc: {
     apiUrl: 'https://api.bscscan.com/api',
-    apiKey: config.bscscanApiKey,
-  },
-  arbitrum: {
-    apiUrl: 'https://api.arbiscan.io/api',
-    apiKey: config.arbiscanApiKey,
+    apiKey: config.bscscanApiKey || '',
+    explorerName: 'BSCscan',
   },
 };
 
@@ -59,27 +56,6 @@ export class EtherscanService {
     isVerified: boolean;
     contractName?: string;
   }> {
-    // Check cache first
-    if (config.enableCaching) {
-      const cached = await prisma.contractCache.findUnique({
-        where: {
-          contractAddress_chain: {
-            contractAddress: address.toLowerCase(),
-            chain,
-          },
-        },
-      });
-
-      if (cached && cached.expiresAt > new Date()) {
-        return {
-          sourceCode: cached.sourceCode,
-          abi: cached.abi,
-          compilerVersion: cached.compilerVersion || '',
-          isVerified: cached.isVerified,
-        };
-      }
-    }
-
     // Fetch from blockchain explorer
     const chainConfig = CHAIN_CONFIGS[chain];
     if (!chainConfig) {
@@ -141,36 +117,6 @@ export class EtherscanService {
         abi = JSON.parse(result.abi);
       } catch (e) {
         abi = null;
-      }
-
-      // Cache the result
-      if (config.enableCaching) {
-        await prisma.contractCache.upsert({
-          where: {
-            contractAddress_chain: {
-              contractAddress: address.toLowerCase(),
-              chain,
-            },
-          },
-          create: {
-            contractAddress: address.toLowerCase(),
-            chain,
-            sourceCode,
-            abi,
-            compilerVersion: result.compilerVersion,
-            isVerified: true,
-            fetchedAt: new Date(),
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-          },
-          update: {
-            sourceCode,
-            abi,
-            compilerVersion: result.compilerVersion,
-            isVerified: true,
-            fetchedAt: new Date(),
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          },
-        });
       }
 
       return {
