@@ -19,6 +19,22 @@ function copyWasmPlugin(): Plugin {
 
   return {
     name: 'copy-wasm',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.includes('@runanywhere/web-llamacpp/wasm/')) {
+          const fileName = req.url.split('/').pop()?.split('?')[0];
+          if (fileName) {
+            const filePath = path.join(llamacppWasm, fileName);
+            if (fs.existsSync(filePath)) {
+              res.setHeader('Content-Type', fileName.endsWith('.wasm') ? 'application/wasm' : 'application/javascript');
+              res.end(fs.readFileSync(filePath));
+              return;
+            }
+          }
+        }
+        next();
+      });
+    },
     writeBundle(options) {
       const outDir = options.dir ?? path.resolve(__dir, 'dist');
       const assetsDir = path.join(outDir, 'assets');

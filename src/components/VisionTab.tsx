@@ -21,13 +21,19 @@ export function VisionTab() {
   const [liveMode, setLiveMode] = useState(false);
   const [result, setResult] = useState<VisionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState('Describe what you see briefly.');
+  const [prompt, setPrompt] = useState('Analyze this Solidity code for immediate security risks or bugs.');
 
   const videoMountRef = useRef<HTMLDivElement>(null);
   const captureRef = useRef<VideoCapture | null>(null);
   const processingRef = useRef(false);
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const liveModeRef = useRef(false);
+
+  const SECURITY_ADVISOR_SYSTEM_PROMPT = `You are an expert Smart Contract Auditor. 
+  When looking at code:
+  1. Identify the contract name and purpose.
+  2. Flag obvious vulnerabilities (Reentrancy, Integer Overflow, Access Control).
+  3. Keep responses technical but concise.`;
 
   // Keep refs in sync with state so interval callbacks see latest values
   processingRef.current = processing;
@@ -101,8 +107,8 @@ export function VisionTab() {
         frame.rgbPixels,
         frame.width,
         frame.height,
-        prompt,
-        { maxTokens, temperature: 0.6 },
+        `${SECURITY_ADVISOR_SYSTEM_PROMPT}\n\nTask: ${prompt}`,
+        { maxTokens, temperature: 0.4 },
       );
 
       setResult({ text: res.text, totalMs: performance.now() - t0 });

@@ -91,12 +91,17 @@ export function VoiceTab() {
     VAD.reset();
 
     vadUnsub.current = VAD.onSpeechActivity((activity) => {
-      if (activity === SpeechActivity.Ended) {
-        const segment = VAD.popSpeechSegment();
-        if (segment && segment.samples.length > 1600) {
-          processSpeech(segment.samples);
+      // Only process new speech if we are currently in 'listening' state
+      setVoiceState((current) => {
+        if (activity === SpeechActivity.Ended && current === 'listening') {
+          const segment = VAD.popSpeechSegment();
+          if (segment && segment.samples.length > 1600) {
+            // Trigger processing without blocking the state update
+            setTimeout(() => processSpeech(segment.samples), 0);
+          }
         }
-      }
+        return current;
+      });
     });
 
     await mic.start(
@@ -110,16 +115,14 @@ export function VoiceTab() {
     const pipeline = pipelineRef.current;
     if (!pipeline) return;
 
-    // Stop mic during processing
-    micRef.current?.stop();
-    vadUnsub.current?.();
+    // We keep the mic running but stop VAD processing temporarily to avoid self-echo
     setVoiceState('processing');
 
     try {
       const result = await pipeline.processTurn(audioData, {
-        maxTokens: 60,
-        temperature: 0.7,
-        systemPrompt: 'You are a helpful voice assistant. Keep responses concise — 1-2 sentences max.',
+        maxTokens: 100,
+        temperature: 0.3,
+        systemPrompt: 'You are an elite Smart Contract Security Auditor. Analyze the users input and provide concise, technical, yet accessible advice about blockchain security. Focus on vulnerabilities like reentrancy, access control, and gas optimization.',
       }, {
         onTranscription: (text) => {
           setTranscript(text);
@@ -135,6 +138,11 @@ export function VoiceTab() {
           const player = new AudioPlayback({ sampleRate });
           await player.play(audio, sampleRate);
           player.dispose();
+          
+          // Re-enable listening after speaking finishes
+          if (micRef.current?.isCapturing) {
+            setVoiceState('listening');
+          }
         },
         onStateChange: (s) => {
           if (s === 'processingSTT') setVoiceState('processing');
@@ -149,10 +157,8 @@ export function VoiceTab() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setVoiceState('idle');
     }
-
-    setVoiceState('idle');
-    setAudioLevel(0);
   }, []);
 
   const stopListening = useCallback(() => {

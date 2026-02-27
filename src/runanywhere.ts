@@ -38,7 +38,27 @@ import vlmWorkerUrl from './workers/vlm-worker?worker&url';
 // ---------------------------------------------------------------------------
 
 const MODELS: CompactModelDef[] = [
-  // LLM — Liquid AI LFM2 350M (small + fast for chat)
+  // TinyLlama 1.1B — Highly compatible Llama-based model
+  {
+    id: 'tinyllama-1.1b-chat-v1.0-q4_k_m',
+    name: 'TinyLlama 1.1B Chat (Q4_K_M)',
+    repo: 'TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
+    files: ['tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf'],
+    framework: LLMFramework.LlamaCpp,
+    modality: ModelCategory.Language,
+    memoryRequirement: 700_000_000,
+  },
+  // SmolLM 360M — Llama-based architecture (~95% smaller than Llama 7B)
+  {
+    id: 'smollm-360m-instruct-q8_0',
+    name: 'SmolLM 360M Instruct (Q8_0)',
+    repo: 'HuggingFaceTB/SmolLM-360M-Instruct-GGUF',
+    files: ['smollm-360m-instruct-q8_0.gguf'],
+    framework: LLMFramework.LlamaCpp,
+    modality: ModelCategory.Language,
+    memoryRequirement: 450_000_000,
+  },
+  // LLM — Liquid AI LFM2 350M (original small model)
   {
     id: 'lfm2-350m-q4_k_m',
     name: 'LFM2 350M Q4_K_M',

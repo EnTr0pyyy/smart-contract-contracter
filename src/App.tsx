@@ -3,7 +3,7 @@ import { initSDK, getAccelerationMode } from './runanywhere';
 import { ChatTab } from './components/ChatTab';
 import { VisionTab } from './components/VisionTab';
 import { VoiceTab } from './components/VoiceTab';
-import { ContractAnalyzer } from './components/ContractAnalyzer';
+import { SmartContractAuditor } from './components/SmartContractAuditor';
 
 type Tab = 'chat' | 'vision' | 'voice' | 'contract';
 
@@ -62,7 +62,7 @@ export function App() {
       </nav>
 
       <main className="tab-content">
-        {activeTab === 'contract' && <ContractAnalyzer />}
+        {activeTab === 'contract' && <SmartContractAuditor />}
         {activeTab === 'chat' && <ChatTab />}
         {activeTab === 'vision' && <VisionTab />}
         {activeTab === 'voice' && <VoiceTab />}
