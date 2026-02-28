@@ -345,9 +345,9 @@ ${contractCode.slice(0, 2000)}
   return (
     <div style={{
       background:"linear-gradient(135deg,#0a0a15 0%,#1a1a2e 50%,#0d0d1f 100%)",
-      minHeight:"100vh",
+      minHeight:"calc(100vh - 100px)",
       fontFamily:'"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-      color:"#e8e8e8", padding:"32px 20px", overflow:"auto"
+      color:"#e8e8e8", padding:"40px 20px 80px", overflow:"visible"
     }}>
       {/* RunAnywhere Loaders UI */}
       <div style={{maxWidth:"1200px", margin: "0 auto 20px"}}>
@@ -373,7 +373,7 @@ ${contractCode.slice(0, 2000)}
               Smart Contract Security Auditor
             </h1>
           </div>
-          <div style={{display:"flex", alignItems:"center", gap: "12px", marginLeft: "48px"}}>
+          <div style={{display:"flex", alignItems:"center", gap: "12px", marginLeft: "12px"}}>
             <p style={{fontSize:"15px",color:"#888",margin:"0"}}>
               Detect vulnerabilities instantly using On-Device AI
             </p>
@@ -386,7 +386,7 @@ ${contractCode.slice(0, 2000)}
         </div>
 
         {/* Action Bar */}
-        <div style={{display:"flex", gap:"12px", marginBottom:"24px"}}>
+        <div style={{display:"flex", gap:"12px", marginBottom:"24px", flexWrap: "wrap"}}>
            <button onClick={speaking ? undefined : speakResults} style={{
               padding:"10px 18px", background:speaking ? "#22C55E" : "rgba(79,172,254,0.1)", 
               border:"1px solid rgba(79,172,254,0.3)", color: "white", borderRadius:"12px",
@@ -405,12 +405,12 @@ ${contractCode.slice(0, 2000)}
         </div>
 
         {/* Grid */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(350px, 1fr))",gap:"28px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",gap:"28px"}}>
 
           {/* LEFT — Input */}
           <div style={{background:"rgba(20,20,35,.7)",border:"1px solid rgba(79,172,254,.2)",
             borderRadius:"16px",padding:"28px",backdropFilter:"blur(10px)",
-            display:"flex",flexDirection:"column",minHeight:"600px"}}>
+            display:"flex",flexDirection:"column",minHeight:"500px"}}>
 
             <h2 style={{fontSize:"18px",fontWeight:"700",color:"#4FAFFE",margin:"0 0 20px 0"}}>
               Contract Code
@@ -445,7 +445,7 @@ ${contractCode.slice(0, 2000)}
               style={{flex:1,background:"rgba(0,0,0,.4)",border:"1px solid rgba(79,172,254,.2)",
                 borderRadius:"8px",padding:"12px",color:"#e8e8e8",
                 fontFamily:'"Fira Code",monospace',fontSize:"12px",
-                resize:"none",marginBottom:"16px",outline:"none"}}/>
+                resize:"vertical",minHeight:"200px",marginBottom:"16px",outline:"none"}}/>
 
             {error && (
               <div style={{background:"rgba(255,59,59,.12)",border:"1px solid rgba(255,59,59,.4)",
@@ -471,7 +471,7 @@ ${contractCode.slice(0, 2000)}
 
           {/* RIGHT — Results */}
           <div style={{background:"rgba(20,20,35,.7)",border:"1px solid rgba(79,172,254,.2)",
-            borderRadius:"16px",padding:"28px",backdropFilter:"blur(10px)",minHeight:"600px",
+            borderRadius:"16px",padding:"28px",backdropFilter:"blur(10px)",minHeight:"400px",
             display:"flex",flexDirection:"column",justifyContent:"center"}}>
             {!results ? (
               <div style={{textAlign:"center",opacity:.5}}>
@@ -543,12 +543,17 @@ ${contractCode.slice(0, 2000)}
 
         {/* AI Deep Analysis Section */}
         {(aiLoading || aiDone) && results && (
-          <div style={{marginTop:"28px"}}>
+          <div style={{marginTop:"28px", paddingBottom: "40px"}}>
             <h2 style={{fontSize:"18px",fontWeight:"700",color:"#4FAFFE",marginBottom:"16px",
               display:"flex",alignItems:"center",gap:"8px"}}>
               <BrainIcon size={18}/>
               On-Device Deep Audit
-              {aiLoading && <span className="shimmer-text">AI is thinking...</span>}
+              {aiLoading && (
+                <div style={{display: "flex", alignItems: "center", gap: "10px", marginLeft: "10px"}}>
+                  <div className="spinner-sm" style={{borderColor: "#4FAFFE", borderTopColor: "transparent"}} />
+                  <span className="shimmer-text">AI is thinking...</span>
+                </div>
+              )}
             </h2>
             <div style={{background:"rgba(20,20,35,.7)",border:"1px solid rgba(79,172,254,.25)",
               borderRadius:"12px",padding:"24px",backdropFilter:"blur(10px)",position:"relative",overflow:"hidden"}}>
