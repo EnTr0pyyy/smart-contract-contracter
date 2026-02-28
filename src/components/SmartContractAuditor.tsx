@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, ReactNode, useEffect } from "react";
 import { ModelCategory } from '@runanywhere/web';
 import { TextGeneration } from '@runanywhere/web-llamacpp';
-import { TTS, AudioPlayback, AudioCapture, VAD, SpeechActivity } from '@runanywhere/web-onnx';
 import { useModelLoader } from '../hooks/useModelLoader';
 import { ModelBanner } from './ModelBanner';
 
@@ -23,8 +22,6 @@ const CheckIcon   = ({ size, style }: { size?: number; style?: React.CSSProperti
 const SparkIcon   = ({ size, style }: { size?: number; style?: React.CSSProperties }) => <Icon size={size} style={style} d="M9.937 15.5A2 2 0 008.5 14.063l-6.135-1.582a.5.5 0 010-.962L8.5 9.936A2 2 0 009.937 8.5l1.582-6.135a.5.5 0 01.962 0L14.063 8.5A2 2 0 0115.5 9.937l6.135 1.582a.5.5 0 010 .962L15.5 14.063A2 2 0 0114.063 15.5l-1.582 6.135a.5.5 0 01-.962 0z" />;
 const UploadIcon  = ({ size, style }: { size?: number; style?: React.CSSProperties }) => <Icon size={size} style={style} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
 const BrainIcon   = ({ size, style }: { size?: number; style?: React.CSSProperties }) => <Icon size={size} style={style} d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-4.96-.44 2.5 2.5 0 01-2.96-3.08 3 3 0 01-.34-5.58 2.5 2.5 0 013.32-3.97A2.5 2.5 0 019.5 2zM14.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 004.96-.44 2.5 2.5 0 002.96-3.08 3 3 0 00.34-5.58 2.5 2.5 0 00-3.32-3.97A2.5 2.5 0 0014.5 2z" />;
-const MicIcon     = ({ size, style }: { size?: number; style?: React.CSSProperties }) => <Icon size={size} style={style} d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z M19 10v2a7 7 0 01-14 0v-2 M12 19v4 M8 23h8" />;
-const VolumeIcon  = ({ size, style }: { size?: number; style?: React.CSSProperties }) => <Icon size={size} style={style} d="M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 010 7.07 M19.07 4.93a10 10 0 010 14.14" />;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface Vulnerability {
@@ -116,39 +113,6 @@ contract SecureToken {
 }`
 ];
 
-// ── Pattern detection logic ────────────────────────────────────────────────
-function detectPatterns(code: string): Vulnerability[] {
-  const findings: Vulnerability[] = [];
-  if (code.includes("function mint(")) {
-    if (!/function mint\([^)]*\)[^{]*onlyOwner/s.test(code)) {
-      findings.push({ title: "Unlimited Minting Without Access Control", severity: "Critical",
-        description: "The mint() function lacks owner protection. Any address can mint unlimited tokens.",
-        recommendation: "Add onlyOwner modifier and implement supply limits." });
-    }
-  }
-  if (code.includes("delegatecall")) {
-    findings.push({ title: "Dangerous delegatecall Usage", severity: "High",
-      description: "Delegatecall can lead to arbitrary code execution if not properly validated.",
-      recommendation: "Use safe proxy patterns like EIP-1967 or avoid delegatecall entirely." });
-  }
-  if (code.includes("selfdestruct")) {
-    findings.push({ title: "Selfdestruct Function Present", severity: "Critical",
-      description: "Selfdestruct permanently destroys the contract.",
-      recommendation: "Remove selfdestruct. Use pause flags for contract suspension instead." });
-  }
-  if (code.includes("function setFee(") && !code.match(/function setFee\([^)]*\)[^{]*onlyOwner/s)) {
-    findings.push({ title: "Unprotected Fee Function", severity: "High",
-      description: "Fee adjustment lacks owner protection.",
-      recommendation: "Add onlyOwner modifier or use immutable fee constants." });
-  }
-  if (!code.includes("modifier onlyOwner")) {
-    findings.push({ title: "Missing Access Control Pattern", severity: "Medium",
-      description: "No onlyOwner modifier found.",
-      recommendation: "Implement proper access control modifiers for sensitive operations." });
-  }
-  return findings;
-}
-
 // ── Styling helpers ─────────────────────────────────────────────────────────
 const sevColor = (s: string) => ({ Critical:"#FF3B3B", High:"#FF9D3B", Medium:"#FFD93B", Low:"#6BCB77" }[s]||"#4D96FF");
 const sevBg    = (s: string) => ({ Critical:"rgba(255,59,59,.1)", High:"rgba(255,157,59,.1)", Medium:"rgba(255,217,59,.1)", Low:"rgba(107,203,119,.1)" }[s]||"rgba(77,150,255,.1)");
@@ -174,20 +138,13 @@ export function SmartContractAuditor() {
 
   // RunAnywhere SDK Loaders
   const llmLoader = useModelLoader(ModelCategory.Language);
-  const ttsLoader = useModelLoader(ModelCategory.SpeechSynthesis, true);
-  const sttLoader = useModelLoader(ModelCategory.SpeechRecognition, true);
-  const vadLoader = useModelLoader(ModelCategory.Audio, true);
 
   // AI state
   const [aiStream, setAiStream] = useState("");
   const [aiDone, setAiDone] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [dictating, setDictating] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
   
   const cancelRef = useRef<(() => void) | null>(null);
-  const micRef = useRef<AudioCapture | null>(null);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,65 +283,6 @@ ${contractCode.slice(0, 1500)}
     workerRef.current.postMessage({ code });
   };
 
-  // ── TTS: Read Results ──────────────────────────────────────────────────────
-  const speakResults = async () => {
-    if (!results || speaking) return;
-    if (ttsLoader.state !== 'ready') {
-      const ok = await ttsLoader.ensure();
-      if (!ok) return;
-    }
-
-    setSpeaking(true);
-    try {
-      const text = `Audit complete. Security score is ${results.securityScore} out of 100. ${aiDone || 'Analysis in progress.'}`;
-      const audio = await TTS.synthesize(text);
-      const player = new AudioPlayback({ sampleRate: audio.sampleRate });
-      await player.play(audio.samples, audio.sampleRate);
-      player.dispose();
-    } catch (err) {
-      console.error('Speech synthesis failed', err);
-    } finally {
-      setSpeaking(false);
-    }
-  };
-
-  // ── STT: Dictate Code or Prompts ────────────────────────────────────────────
-  const startDictation = async () => {
-    if (dictating) return;
-    setDictating(true);
-
-    try {
-      if (sttLoader.state !== 'ready') await sttLoader.ensure();
-      if (vadLoader.state !== 'ready') await vadLoader.ensure();
-
-      const mic = new AudioCapture({ sampleRate: 16000 });
-      micRef.current = mic;
-
-      VAD.reset();
-      const unsub = VAD.onSpeechActivity((activity) => {
-        if (activity === SpeechActivity.Ended) {
-          const segment = VAD.popSpeechSegment();
-          if (segment) {
-            // Here you would normally run STT on the segment
-            // For brevity in this demo, we'll just show the mic is active
-            console.log("Speech segment captured for transcription");
-          }
-        }
-      });
-
-      await mic.start(() => {}, (level) => setAudioLevel(level));
-    } catch (err) {
-      console.error('Dictation failed', err);
-      setDictating(false);
-    }
-  };
-
-  const stopDictation = () => {
-    micRef.current?.stop();
-    setDictating(false);
-    setAudioLevel(0);
-  };
-
   const aiText = aiLoading ? aiStream : aiDone;
 
   return (
@@ -428,25 +326,6 @@ ${contractCode.slice(0, 1500)}
               ⚡ RunAnywhere Optimized
             </span>
           </div>
-        </div>
-
-        {/* Action Bar */}
-        <div style={{display:"flex", gap:"12px", marginBottom:"24px", flexWrap: "wrap"}}>
-           <button onClick={speaking ? undefined : speakResults} style={{
-              padding:"10px 18px", background:speaking ? "#22C55E" : "rgba(79,172,254,0.1)", 
-              border:"1px solid rgba(79,172,254,0.3)", color: "white", borderRadius:"12px",
-              cursor: results ? "pointer" : "not-allowed", opacity: results ? 1 : 0.5,
-              display:"flex", alignItems:"center", gap:"8px", transition:"all 0.3s"}}
-              disabled={!results}>
-              <VolumeIcon size={16} /> {speaking ? "Auditor Speaking..." : "Listen to Audit"}
-           </button>
-           <button onClick={dictating ? stopDictation : startDictation} style={{
-              padding:"10px 18px", background:dictating ? "#EF4444" : "rgba(107,203,119,0.1)", 
-              border:"1px solid rgba(107,203,119,0.3)", color: "white", borderRadius:"12px",
-              cursor:"pointer", display:"flex", alignItems:"center", gap:"8px", transition:"all 0.3s",
-              transform: `scale(${1 + audioLevel * 0.2})`}}>
-              <MicIcon size={16} /> {dictating ? "Stop Dictation" : "Voice Dictate Code"}
-           </button>
         </div>
 
         {/* Grid */}

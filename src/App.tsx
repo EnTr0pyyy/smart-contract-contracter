@@ -5,7 +5,7 @@ import { VisionTab } from './components/VisionTab';
 import { VoiceTab } from './components/VoiceTab';
 import { SmartContractAuditor } from './components/SmartContractAuditor';
 
-type Tab = 'chat' | 'vision' | 'voice' | 'contract';
+type Tab = 'chat' | 'contract';
 
 export function App() {
   const [sdkReady, setSdkReady] = useState(false);
@@ -53,19 +53,11 @@ export function App() {
         <button className={activeTab === 'chat' ? 'active' : ''} onClick={() => setActiveTab('chat')}>
           💬 Chat
         </button>
-        <button className={activeTab === 'vision' ? 'active' : ''} onClick={() => setActiveTab('vision')}>
-          📷 Vision
-        </button>
-        <button className={activeTab === 'voice' ? 'active' : ''} onClick={() => setActiveTab('voice')}>
-          🎙️ Voice
-        </button>
       </nav>
 
       <main className="tab-content">
         {activeTab === 'contract' && <SmartContractAuditor />}
         {activeTab === 'chat' && <ChatTab />}
-        {activeTab === 'vision' && <VisionTab />}
-        {activeTab === 'voice' && <VoiceTab />}
       </main>
     </div>
   );
