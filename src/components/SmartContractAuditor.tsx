@@ -226,9 +226,9 @@ Scanner found:
 ${issuesSummary}
 
 Instructions:
-1. Review the code carefully.
-2. Identify the most dangerous vulnerability missed by the scanner.
-3. Be technical and precise.
+1. Review the code.
+2. Identify the most dangerous vulnerability missed.
+3. Be brief and technical.
 
 Format:
 **Audit Summary:**
@@ -237,12 +237,21 @@ Format:
 
 Code:
 \`\`\`solidity
-${contractCode.slice(0, 2000)}
+${contractCode.slice(0, 1500)}
 \`\`\``;
 
     try {
+      // 30-second safety timeout
+      const timeoutId = setTimeout(() => {
+        if (cancelRef.current) {
+          cancelRef.current();
+          setAiDone("Analysis timed out after 30s. Displaying partial results.");
+          setAiLoading(false);
+        }
+      }, 30000);
+
       const { stream, result: resultPromise, cancel } = await TextGeneration.generateStream(userPrompt, {
-        maxTokens: 500,
+        maxTokens: 300,
         temperature: 0.1,
       });
       cancelRef.current = cancel;
@@ -253,6 +262,7 @@ ${contractCode.slice(0, 2000)}
         setAiStream(accumulated);
       }
 
+      clearTimeout(timeoutId);
       const finalResult = await resultPromise;
       setAiDone(finalResult.text || accumulated);
     } catch (err) {
@@ -292,6 +302,13 @@ ${contractCode.slice(0, 2000)}
         const analysisResults = e.data.results;
         setResults(analysisResults);
         setAnalyzing(false);
+        
+        // Skip AI Deep Analysis if score is 100 (Perfect)
+        if (analysisResults.securityScore === 100) {
+          setAiDone("**Perfect Score!** No known vulnerabilities detected. This contract follows established security patterns.");
+          return;
+        }
+
         // Trigger On-Device AI Deep Analysis
         runAIAnalysis(code, analysisResults.vulnerabilities);
       } else {
