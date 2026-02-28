@@ -1,9 +1,12 @@
-import { useState, useRef, useCallback, ReactNode } from "react";
+import { useState, useRef, useCallback, ReactNode, useEffect } from "react";
 import { ModelCategory } from '@runanywhere/web';
 import { TextGeneration } from '@runanywhere/web-llamacpp';
 import { TTS, AudioPlayback, AudioCapture, VAD, SpeechActivity } from '@runanywhere/web-onnx';
 import { useModelLoader } from '../hooks/useModelLoader';
 import { ModelBanner } from './ModelBanner';
+
+// @ts-ignore
+import AnalysisWorker from '../workers/analysis-worker?worker';
 
 // ── Icons (inline SVGs) ──────────────────────────────────────────────────────────
 const Icon = ({ d, size = 16, style = {} }: { d: string; size?: number; style?: React.CSSProperties }) => (
@@ -154,9 +157,20 @@ const scoreCol = (s: number) => s>=80?"#6BCB77":s>=60?"#FFD93B":s>=40?"#FF9D3B":
 export function SmartContractAuditor() {
   const [code, setCode] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    // Initialize worker
+    workerRef.current = new AnalysisWorker();
+    
+    return () => {
+      workerRef.current?.terminate();
+    };
+  }, []);
 
   // RunAnywhere SDK Loaders
   const llmLoader = useModelLoader(ModelCategory.Language);
@@ -253,32 +267,46 @@ ${contractCode.slice(0, 2000)}
   // ── Main Analysis Trigger ──────────────────────────────────────────────────
   const analyzeContract = async () => {
     if (!code.trim()) { setError("Please enter or upload Solidity code"); return; }
-    setAnalyzing(true); setError(""); setResults(null); setAiDone(""); setAiStream("");
+    
+    setAnalyzing(true); 
+    setAnalysisProgress(0);
+    setError(""); 
+    setResults(null); 
+    setAiDone(""); 
+    setAiStream("");
 
-    try {
-      const patterns = detectPatterns(code);
-      let score = 100;
-      score -= patterns.filter(p=>p.severity==="Critical").length * 25;
-      score -= patterns.filter(p=>p.severity==="High").length    * 15;
-      score -= patterns.filter(p=>p.severity==="Medium").length  * 8;
-      score  = Math.max(0, score);
-
-      const analysisResults: AnalysisResults = {
-        securityScore: score,
-        vulnerabilities: patterns.sort((a,b)=>
-          ({Critical:0,High:1,Medium:2,Low:3} as any)[a.severity]-({Critical:0,High:1,Medium:2,Low:3} as any)[b.severity]),
-        timestamp: new Date().toLocaleTimeString(),
-        contractSize: code.split("\n").length,
-      };
-      setResults(analysisResults);
-
-      // Trigger On-Device AI Deep Analysis
-      runAIAnalysis(code, patterns);
-    } catch(err) {
-      setError("Analysis failed. Please check your code.");
-    } finally {
-      setAnalyzing(false);
+    if (!workerRef.current) {
+      workerRef.current = new AnalysisWorker();
     }
+
+    // Progress simulation for UX
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => Math.min(prev + 10, 90));
+    }, 100);
+
+    workerRef.current.onmessage = (e: MessageEvent) => {
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+      
+      if (e.data.type === 'RESULTS') {
+        const analysisResults = e.data.results;
+        setResults(analysisResults);
+        setAnalyzing(false);
+        // Trigger On-Device AI Deep Analysis
+        runAIAnalysis(code, analysisResults.vulnerabilities);
+      } else {
+        setError("Analysis failed in worker thread.");
+        setAnalyzing(false);
+      }
+    };
+
+    workerRef.current.onerror = (err) => {
+      clearInterval(progressInterval);
+      setError("Worker error: " + err.message);
+      setAnalyzing(false);
+    };
+
+    workerRef.current.postMessage({ code });
   };
 
   // ── TTS: Read Results ──────────────────────────────────────────────────────
@@ -460,9 +488,17 @@ ${contractCode.slice(0, 2000)}
               color:"#fff",fontWeight:"700",fontSize:"15px",
               cursor:analyzing?"not-allowed":"pointer",
               transition:"all .3s ease",opacity:analyzing?0.6:1,
-              display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}>
+              display:"flex",alignItems:"center",justifyContent:"center",gap:"8px",
+              flexDirection: analyzing ? "column" : "row"}}>
               {analyzing ? (
-                <><div className="spinner-sm" /> Analyzing…</>
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <div className="spinner-sm" /> Running Security Engine...
+                  </div>
+                  <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${analysisProgress}%`, height: '100%', background: '#fff', transition: 'width 0.2s' }} />
+                  </div>
+                </div>
               ) : (
                 <><ZapIcon size={16}/> Run Security Audit</>
               )}
