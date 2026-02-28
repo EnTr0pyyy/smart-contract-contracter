@@ -208,7 +208,7 @@ ${contractCode.slice(0, 1500)}
       }, 30000);
 
       const { stream, result: resultPromise, cancel } = await TextGeneration.generateStream(userPrompt, {
-        maxTokens: 300,
+        maxTokens: 360,
         temperature: 0.1,
       });
       cancelRef.current = cancel;

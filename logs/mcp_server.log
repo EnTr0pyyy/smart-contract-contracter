@@ -1,0 +1,22 @@
+2026-02-27 18:58:20,296 - tools.Image - INFO - Gemini API configured successfully.
+2026-02-27 18:58:28,503 - __main__ - INFO - Starting MCP Server: MyAwesomeMCPServer 
+2026-02-27 18:58:28,551 - mcp.server.lowlevel.server - INFO - Processing request of type ListPromptsRequest
+2026-02-27 18:58:28,567 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-02-27 18:58:28,631 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2026-02-27 19:07:42,971 - __main__ - INFO - MCP Server 'MyAwesomeMCPServer' shutdown complete.
+2026-02-27 19:08:26,088 - tools.Image - INFO - Gemini API configured successfully.
+2026-02-27 19:08:28,547 - __main__ - INFO - Starting MCP Server: MyAwesomeMCPServer 
+2026-02-27 19:08:28,590 - mcp.server.lowlevel.server - INFO - Processing request of type ListPromptsRequest
+2026-02-27 19:08:28,610 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-02-27 19:08:28,665 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2026-02-28 10:38:23,129 - tools.Image - INFO - Gemini API configured successfully.
+2026-02-28 10:38:31,895 - __main__ - INFO - Starting MCP Server: MyAwesomeMCPServer 
+2026-02-28 10:38:31,953 - mcp.server.lowlevel.server - INFO - Processing request of type ListPromptsRequest
+2026-02-28 10:38:31,974 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-02-28 10:38:32,045 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
+2026-02-28 10:45:55,009 - __main__ - INFO - MCP Server 'MyAwesomeMCPServer' shutdown complete.
+2026-02-28 10:47:15,810 - tools.Image - INFO - Gemini API configured successfully.
+2026-02-28 10:47:18,991 - __main__ - INFO - Starting MCP Server: MyAwesomeMCPServer 
+2026-02-28 10:47:19,028 - mcp.server.lowlevel.server - INFO - Processing request of type ListPromptsRequest
+2026-02-28 10:47:19,042 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2026-02-28 10:47:19,092 - mcp.server.lowlevel.server - INFO - Processing request of type ListResourcesRequest
